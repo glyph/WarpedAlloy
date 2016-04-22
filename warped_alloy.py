@@ -24,6 +24,11 @@ from twisted.internet.unix import Server as UNIXServer
 from twisted.web.server import Site
 from twisted.web.static import Data
 
+STDIN = 0
+STDOUT = 1
+STDERR = 2
+MAGIC_FILE_DESCRIPTOR = 7
+
 
 def show(*args):
     """
