@@ -193,10 +193,8 @@ class WorkerOptions(Options, object):
 
         # TODO: adoptStreamConnection should really support AF_UNIX
         protocol = ConnectionFromManager(reactor, factory)
-        fileDescriptor = 7
-        skt = fromfd(fileDescriptor, AF_UNIX, SOCK_STREAM)
-        show("fromfd", skt)
-        # os.close(fileDescriptor)
+        skt = fromfd(MAGIC_FILE_DESCRIPTOR, AF_UNIX, SOCK_STREAM)
+        os.close(MAGIC_FILE_DESCRIPTOR)
         serverTransport = UNIXServer(skt, protocol, None, None, 1234, reactor)
         show("transported")
         protocol.makeConnection(serverTransport)
@@ -322,19 +320,14 @@ class MPMManager(object):
         script = __main__.__file__
         argv = [sys.executable, script, b'w']
         show("argv?", argv)
-        procTrans = self.reactor.spawnProcess(
+        self.reactor.spawnProcess(
             MyProcessProtocol(self), sys.executable,
             args=argv,
             env=os.environ.copy(),
-            childFDs={
-                0: 'w',
-                1: 'r',
-                2: 'r',
-                7: there.fileno(),
-            }
+            childFDs={STDIN: 'w', STDOUT: 'r', STDERR: 'r',
+                      MAGIC_FILE_DESCRIPTOR: there.fileno()}
         )
-        show(procTrans)
-        # there.close()
+        there.close()
         serverTransport.startReading()
         self.openSubprocessConnections.append(owp)
 
