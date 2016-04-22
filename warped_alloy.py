@@ -24,6 +24,15 @@ from twisted.internet.unix import Server as UNIXServer
 from twisted.web.server import Site
 from twisted.web.static import Data
 
+
+def show(*args):
+    """
+    
+    """
+    print(*args)
+    sys.stdout.flush()
+    sys.stderr.flush()
+
 class ManagerServerNotReallyProtocol(Protocol, object):
     """
     
@@ -35,12 +44,13 @@ class ManagerServerNotReallyProtocol(Protocol, object):
         """
         transport = self.transport
         # goodbye, sweet reactor
-        transport.stopReading()
-        transport.stopWriting()
 
         socketObject = transport.getHandle()
+
         self.factory.mpmManager.sendOutFileDescriptor(socketObject.fileno())
-        socketObject.close()
+
+        transport.stopReading()
+        transport.stopWriting()
 
 
 
@@ -67,7 +77,7 @@ class ManagerOptions(Options, object):
         """
         
         """
-        print("manager-ing")
+        show("manager-ing")
 
 
     @inlineCallbacks
@@ -115,7 +125,7 @@ class ConnectionFromManager(AMP, object):
         """
         
         """
-        print("CFM")
+        show("CFM")
 
 
     def connectionLost(self, reason):
@@ -123,7 +133,7 @@ class ConnectionFromManager(AMP, object):
         
         """
         super(ConnectionFromManager, self).connectionLost(reason)
-        print("CL")
+        show("CL")
 
 
     @SendDescriptor.responder
@@ -131,10 +141,18 @@ class ConnectionFromManager(AMP, object):
         """
         
         """
-        print("receivering")
+        show("receivering")
         self.reactor.adoptStreamConnection(descriptor, AF_INET, self.factory)
-        print("receivated")
+        show("receivated")
         return {}
+
+
+    def fileDescriptorReceived(self, descriptor):
+        """
+        
+        """
+        show("FDR", descriptor)
+        return super(ConnectionFromManager, self).fileDescriptorReceived(descriptor)
 
 
     @Ping.responder
@@ -142,7 +160,8 @@ class ConnectionFromManager(AMP, object):
         """
         
         """
-        print("received subprocess ping")
+        show("received subprocess ping")
+        sys.stdout.flush()
         return {}
 
 
@@ -156,14 +175,14 @@ class WorkerOptions(Options, object):
         """
         
         """
-        print("worker-ing")
+        show("worker-ing")
 
 
     def go(self, reactor):
         """
         
         """
-        data = Data("Hello world", "text/plain")
+        data = Data("Hello world\n", "text/plain")
         data.putChild("", data)
         factory = Site(data)
 
@@ -171,14 +190,14 @@ class WorkerOptions(Options, object):
         protocol = ConnectionFromManager(reactor, factory)
         fileDescriptor = 7
         skt = fromfd(fileDescriptor, AF_UNIX, SOCK_STREAM)
-        print("fromfd", skt)
+        show("fromfd", skt)
         # os.close(fileDescriptor)
         serverTransport = UNIXServer(skt, protocol, None, None, 1234, reactor)
-        print("transported")
+        show("transported")
         protocol.makeConnection(serverTransport)
-        print("reading")
+        show("reading")
         serverTransport.startReading()
-        print("waiting...")
+        show("waiting...")
         return Deferred()
 
 
@@ -209,28 +228,28 @@ class MyProcessProtocol(ProcessProtocol, object):
         """
         
         """
-        print("sub-out:", data)
+        show("sub-out:", repr(data))
 
 
     def errReceived(self, data):
         """
         
         """
-        print("sub-err:", data)
+        show("sub-err:", repr(data))
 
 
     def processExited(self, reason):
         """
         
         """
-        print("exit?", reason)
+        show("exit?", reason)
 
 
     def processEnded(self, reason):
         """
         
         """
-        print("ended?", reason)
+        show("ended?", reason)
 
 
 
@@ -243,14 +262,14 @@ class OneWorkerProtocol(AMP, object):
         """
         
         """
-        print("OWP_CM")
+        show("OWP_CM")
 
 
     def connectionLost(self, reason):
         """
         
         """
-        print("OWP_CL", reason)
+        show("OWP_CL", reason)
         super(OneWorkerProtocol, self).connectionLost(reason)
 
 
@@ -259,14 +278,15 @@ class OneWorkerProtocol(AMP, object):
         """
         
         """
-        print("SFD")
+        show("pinging...")
         result1 = yield self.callRemote(Ping)
-        print("sending??????", result1, fileDescriptor)
+        show("pinged!", result1)
+        show("sending??????", result1, fileDescriptor)
         d = self.callRemote(SendDescriptor,
                             descriptor=fileDescriptor)
-        print("send...ing?", d)
+        show("send...ing?")
         result = yield d
-        print("sended/!?@?!", result)
+        show("sended/!?@?!", result)
 
 
 
@@ -296,7 +316,7 @@ class MPMManager(object):
         owp.makeConnection(serverTransport)
         script = __main__.__file__
         argv = [sys.executable, script, b'w']
-        print("argv?", argv)
+        show("argv?", argv)
         procTrans = self.reactor.spawnProcess(
             MyProcessProtocol(self), sys.executable,
             args=argv,
@@ -308,7 +328,7 @@ class MPMManager(object):
                 7: there.fileno(),
             }
         )
-        print(procTrans)
+        show(procTrans)
         # there.close()
         serverTransport.startReading()
         self.openSubprocessConnections.append(owp)
@@ -319,7 +339,7 @@ def main(reactor):
     """
     
     """
-    print("BOOTSTRAP")
+    show("BOOTSTRAP")
     clo = CommandLineOptions()
     clo.parseOptions(sys.argv[1:])
     subCommandParser = clo.subOptions
