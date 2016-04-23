@@ -93,11 +93,6 @@ class ManagerOptions(Options, object):
         yield Deferred()
 
 
-class Ping(Command, object):
-    """
-    
-    """
-
 
 class SendDescriptor(Command, object):
     """
@@ -106,6 +101,7 @@ class SendDescriptor(Command, object):
     arguments = [("descriptor", Descriptor())]
     response = []
     errors = []
+
 
 
 class ConnectionFromManager(AMP, object):
@@ -127,14 +123,6 @@ class ConnectionFromManager(AMP, object):
         
         """
         self.reactor.adoptStreamConnection(descriptor, AF_INET, self.factory)
-        return {}
-
-
-    @Ping.responder
-    def pung(self):
-        """
-        
-        """
         return {}
 
 
