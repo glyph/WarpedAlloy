@@ -36,11 +36,12 @@ def show(*args):
     sys.stdout.flush()
     sys.stderr.flush()
 
-class ManagerServerNotReallyProtocol(Protocol, object):
+@attr.s
+class SendToSubprocess(Protocol, object):
     """
     
     """
-
+    mpm = attr.ib()
     def connectionMade(self):
         """
         
@@ -48,31 +49,15 @@ class ManagerServerNotReallyProtocol(Protocol, object):
         transport = self.transport
         transport.stopReading()
         transport.stopWriting()
+        skt = transport.getHandle()
 
-        socketObject = transport.getHandle()
-
-        sent = (self.factory.mpmManager
-                .sendOutFileDescriptor(socketObject.fileno()))
+        sent = self.mpm.sendOutFileDescriptor(skt.fileno())
 
         @sent.addBoth
         def inevitably(result):
-            socketObject.close()
+            skt.close()
             return result
 
-
-
-class ManagerServerFactory(Factory, object):
-    """
-    
-    """
-
-    def __init__(self, mpmManager):
-        """
-        
-        """
-        self.mpmManager = mpmManager
-
-    protocol = ManagerServerNotReallyProtocol
 
 
 class ManagerOptions(Options, object):
@@ -87,9 +72,8 @@ class ManagerOptions(Options, object):
         """
         mgr = MPMManager(reactor)
         endpoint = TCP4ServerEndpoint(reactor, 8123)
-        msf = ManagerServerFactory(mgr)
-        yield endpoint.listen(msf)
-        mgr.newSubProcess()
+        yield endpoint.listen(Factory.forProtocol(
+            lambda: SendToSubprocess(mgr)))
         yield Deferred()
 
 
