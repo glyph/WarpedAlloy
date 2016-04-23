@@ -46,16 +46,18 @@ class ManagerServerNotReallyProtocol(Protocol, object):
         
         """
         transport = self.transport
+        transport.stopReading()
+        transport.stopWriting()
+
         socketObject = transport.getHandle()
 
         sent = (self.factory.mpmManager
                 .sendOutFileDescriptor(socketObject.fileno()))
+
         @sent.addBoth
         def inevitably(result):
             socketObject.close()
             return result
-        transport.stopReading()
-        transport.stopWriting()
 
 
 
