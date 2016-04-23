@@ -2,8 +2,6 @@
 
 from __future__ import absolute_import, print_function
 
-print("FIRST")
-
 import __main__
 
 import sys
@@ -48,12 +46,14 @@ class ManagerServerNotReallyProtocol(Protocol, object):
         
         """
         transport = self.transport
-        # goodbye, sweet reactor
-
         socketObject = transport.getHandle()
 
-        self.factory.mpmManager.sendOutFileDescriptor(socketObject.fileno())
-
+        sent = (self.factory.mpmManager
+                .sendOutFileDescriptor(socketObject.fileno()))
+        @sent.addBoth
+        def inevitably(result):
+            socketObject.close()
+            return result
         transport.stopReading()
         transport.stopWriting()
 
@@ -77,13 +77,6 @@ class ManagerOptions(Options, object):
     """
     
     """
-
-    def postOptions(self):
-        """
-        
-        """
-        show("manager-ing")
-
 
     @inlineCallbacks
     def go(self, reactor):
@@ -126,38 +119,13 @@ class ConnectionFromManager(AMP, object):
         self.reactor = reactor
 
 
-    def connectionMade(self):
-        """
-        
-        """
-        show("CFM")
-
-
-    def connectionLost(self, reason):
-        """
-        
-        """
-        super(ConnectionFromManager, self).connectionLost(reason)
-        show("CL")
-
-
     @SendDescriptor.responder
     def receiveDescriptor(self, descriptor):
         """
         
         """
-        show("receivering")
         self.reactor.adoptStreamConnection(descriptor, AF_INET, self.factory)
-        show("receivated")
         return {}
-
-
-    def fileDescriptorReceived(self, descriptor):
-        """
-        
-        """
-        show("FDR", descriptor)
-        return super(ConnectionFromManager, self).fileDescriptorReceived(descriptor)
 
 
     @Ping.responder
@@ -165,8 +133,6 @@ class ConnectionFromManager(AMP, object):
         """
         
         """
-        show("received subprocess ping")
-        sys.stdout.flush()
         return {}
 
 
@@ -175,13 +141,6 @@ class WorkerOptions(Options, object):
     """
     
     """
-
-    def postOptions(self):
-        """
-        
-        """
-        show("worker-ing")
-
 
     def go(self, reactor):
         """
@@ -196,11 +155,8 @@ class WorkerOptions(Options, object):
         skt = fromfd(MAGIC_FILE_DESCRIPTOR, AF_UNIX, SOCK_STREAM)
         os.close(MAGIC_FILE_DESCRIPTOR)
         serverTransport = UNIXServer(skt, protocol, None, None, 1234, reactor)
-        show("transported")
         protocol.makeConnection(serverTransport)
-        show("reading")
         serverTransport.startReading()
-        show("waiting...")
         return Deferred()
 
 
@@ -261,35 +217,11 @@ class OneWorkerProtocol(AMP, object):
     
     """
 
-    def connectionMade(self):
-        """
-        
-        """
-        show("OWP_CM")
-
-
-    def connectionLost(self, reason):
-        """
-        
-        """
-        show("OWP_CL", reason)
-        super(OneWorkerProtocol, self).connectionLost(reason)
-
-
-    @inlineCallbacks
     def sendFD(self, fileDescriptor):
         """
         
         """
-        show("pinging...")
-        result1 = yield self.callRemote(Ping)
-        show("pinged!", result1)
-        show("sending??????", result1, fileDescriptor)
-        d = self.callRemote(SendDescriptor,
-                            descriptor=fileDescriptor)
-        show("send...ing?")
-        result = yield d
-        show("sended/!?@?!", result)
+        return self.callRemote(SendDescriptor, descriptor=fileDescriptor)
 
 
 
@@ -304,7 +236,7 @@ class MPMManager(object):
     def sendOutFileDescriptor(self, fileDescriptor):
         if not self.openSubprocessConnections:
             self.newSubProcess()
-        self.openSubprocessConnections[0].sendFD(fileDescriptor)
+        return self.openSubprocessConnections[0].sendFD(fileDescriptor)
 
 
     def newSubProcess(self):
@@ -313,13 +245,10 @@ class MPMManager(object):
         """
         here, there = socketpair(AF_UNIX, SOCK_STREAM)
         owp = OneWorkerProtocol()
-        serverTransport = UNIXServer(here, owp,
-                                     None, None, 4321,
-                                     self.reactor)
+        serverTransport = UNIXServer(here, owp, None, None, 4321, self.reactor)
         owp.makeConnection(serverTransport)
         script = __main__.__file__
         argv = [sys.executable, script, b'w']
-        show("argv?", argv)
         self.reactor.spawnProcess(
             MyProcessProtocol(self), sys.executable,
             args=argv,
@@ -337,7 +266,6 @@ def main(reactor):
     """
     
     """
-    show("BOOTSTRAP")
     clo = CommandLineOptions()
     clo.parseOptions(sys.argv[1:])
     subCommandParser = clo.subOptions
