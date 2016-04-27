@@ -16,8 +16,12 @@ from twisted.internet.task import react
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.protocol import Protocol, Factory, ProcessProtocol
-from twisted.protocols.amp import AMP, Command, Descriptor
+from twisted.protocols.amp import AMP, Command, Descriptor, Unicode
 from twisted.internet.unix import Server as UNIXServer
+from twisted.logger import (
+    eventAsJSON, globalLogBeginner, Logger, formatEventAsClassicLogText,
+    eventFromJSON,
+)
 
 from twisted.web.server import Site
 from twisted.web.static import Data
@@ -78,10 +82,22 @@ class SendDescriptor(Command, object):
 
 
 
+class LogReceived(Command, object):
+    """
+    
+    """
+    arguments = [("message", Unicode())]
+    requiresAnswer = False
+
+
+
 class ConnectionFromManager(AMP, object):
     """
     
     """
+
+    _log = Logger()
+
     def __init__(self, reactor, factory):
         """
         
@@ -96,8 +112,25 @@ class ConnectionFromManager(AMP, object):
         """
         
         """
+        self._log.info(format="adopting new stream connection {descriptor}",
+                       descriptor=descriptor)
         self.reactor.adoptStreamConnection(descriptor, AF_INET, self.factory)
         return {}
+
+
+    def sendLog(self, eventDictionary):
+        """
+        
+        """
+        eventText = eventAsJSON(eventDictionary)
+        self.callRemote(LogReceived, message=eventText)
+
+
+    def connectionLost(self, reason):
+        """
+        
+        """
+        self.reactor.stop()
 
 
 
@@ -121,6 +154,10 @@ class WorkerOptions(Options, object):
         serverTransport = UNIXServer(skt, protocol, None, None, 1234, reactor)
         protocol.makeConnection(serverTransport)
         serverTransport.startReading()
+
+        globalLogBeginner.beginLoggingTo([protocol.sendLog])
+        factory.doStart()
+
         return Deferred()
 
 
@@ -151,6 +188,18 @@ class OneWorkerProtocol(AMP, object):
         
         """
         return self.callRemote(SendDescriptor, descriptor=fileDescriptor)
+
+
+    @LogReceived.responder
+    def oneLogMessage(self, message):
+        """
+        
+        """
+        evt = eventFromJSON(message)
+        text = formatEventAsClassicLogText(evt)
+        messageBytes = (text).encode("utf-8")
+        os.write(STDERR, messageBytes)
+        return {}
 
 
 
