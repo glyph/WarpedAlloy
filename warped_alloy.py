@@ -83,8 +83,6 @@ class SendDescriptor(Command, object):
     
     """
     arguments = [("descriptor", Descriptor())]
-    response = []
-    errors = []
 
 
 
