@@ -219,12 +219,9 @@ class MPMManager(object):
         owp = OneWorkerProtocol()
         serverTransport = UNIXServer(here, owp, None, None, 4321, self.reactor)
         owp.makeConnection(serverTransport)
-        script = __main__.__file__
-        argv = [sys.executable, script, b'w']
+        argv = [sys.executable, __main__.__file__, b'w']
         self.reactor.spawnProcess(
-            MyProcessProtocol(self), sys.executable,
-            args=argv,
-            env=os.environ.copy(),
+            ProcessProtocol(), argv[0], args=argv, env=os.environ.copy(),
             childFDs={STDIN: 'w', STDOUT: 'r', STDERR: 'r',
                       MAGIC_FILE_DESCRIPTOR: there.fileno()}
         )
