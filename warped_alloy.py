@@ -28,14 +28,6 @@ STDERR = 2
 MAGIC_FILE_DESCRIPTOR = 7
 
 
-def show(*args):
-    """
-    
-    """
-    print(*args)
-    sys.stdout.flush()
-    sys.stderr.flush()
-
 @attr.s
 class SendToSubprocess(Protocol, object):
     """
@@ -146,41 +138,6 @@ class CommandLineOptions(Options, object):
     ]
 
     defaultSubCommand = 'manager'
-
-
-@attr.s
-class MyProcessProtocol(ProcessProtocol, object):
-    """
-    
-    """
-    mpmManager = attr.ib()
-
-    def outReceived(self, data):
-        """
-        
-        """
-        show("sub-out:", repr(data))
-
-
-    def errReceived(self, data):
-        """
-        
-        """
-        show("sub-err:", repr(data))
-
-
-    def processExited(self, reason):
-        """
-        
-        """
-        show("exit?", reason)
-
-
-    def processEnded(self, reason):
-        """
-        
-        """
-        show("ended?", reason)
 
 
 
