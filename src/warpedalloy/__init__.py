@@ -236,7 +236,6 @@ class MPMManager(object):
         self.openSubprocessConnections.append(owp)
 
 
-@react
 def main(reactor):
     """
 
