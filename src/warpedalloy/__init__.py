@@ -2,8 +2,6 @@
 
 from __future__ import absolute_import, print_function
 
-import __main__
-
 import sys
 import os
 
@@ -26,6 +24,8 @@ from twisted.logger import (
 from twisted.web.server import Site
 from twisted.web.static import Data
 
+from ._version import __version__
+
 STDIN = 0
 STDOUT = 1
 STDERR = 2
@@ -35,12 +35,12 @@ MAGIC_FILE_DESCRIPTOR = 7
 @attr.s
 class SendToSubprocess(Protocol, object):
     """
-    
+
     """
     mpm = attr.ib()
     def connectionMade(self):
         """
-        
+
         """
         transport = self.transport
         transport.stopReading()
@@ -58,13 +58,13 @@ class SendToSubprocess(Protocol, object):
 
 class ManagerOptions(Options, object):
     """
-    
+
     """
 
     @inlineCallbacks
     def go(self, reactor):
         """
-        
+
         """
         mgr = MPMManager(reactor)
         endpoint = TCP4ServerEndpoint(reactor, 8123)
@@ -76,7 +76,7 @@ class ManagerOptions(Options, object):
 
 class SendDescriptor(Command, object):
     """
-    
+
     """
     arguments = [("descriptor", Descriptor())]
 
@@ -84,7 +84,7 @@ class SendDescriptor(Command, object):
 
 class LogReceived(Command, object):
     """
-    
+
     """
     arguments = [("message", Unicode())]
     requiresAnswer = False
@@ -93,14 +93,14 @@ class LogReceived(Command, object):
 
 class ConnectionFromManager(AMP, object):
     """
-    
+
     """
 
     _log = Logger()
 
     def __init__(self, reactor, factory):
         """
-        
+
         """
         super(ConnectionFromManager, self).__init__()
         self.factory = factory
@@ -110,7 +110,7 @@ class ConnectionFromManager(AMP, object):
     @SendDescriptor.responder
     def receiveDescriptor(self, descriptor):
         """
-        
+
         """
         self._log.info(format="adopting new stream connection {descriptor}",
                        descriptor=descriptor)
@@ -120,7 +120,7 @@ class ConnectionFromManager(AMP, object):
 
     def sendLog(self, eventDictionary):
         """
-        
+
         """
         eventText = eventAsJSON(eventDictionary)
         self.callRemote(LogReceived, message=eventText)
@@ -128,7 +128,7 @@ class ConnectionFromManager(AMP, object):
 
     def connectionLost(self, reason):
         """
-        
+
         """
         self.reactor.stop()
 
@@ -136,12 +136,12 @@ class ConnectionFromManager(AMP, object):
 
 class WorkerOptions(Options, object):
     """
-    
+
     """
 
     def go(self, reactor):
         """
-        
+
         """
         data = Data("Hello world\n", "text/plain")
         data.putChild("", data)
@@ -164,7 +164,7 @@ class WorkerOptions(Options, object):
 
 class CommandLineOptions(Options, object):
     """
-    
+
     """
     synopsis = "Usage: warped_alloy [options]"
 
@@ -180,12 +180,12 @@ class CommandLineOptions(Options, object):
 
 class OneWorkerProtocol(AMP, object):
     """
-    
+
     """
 
     def sendFD(self, fileDescriptor):
         """
-        
+
         """
         return self.callRemote(SendDescriptor, descriptor=fileDescriptor)
 
@@ -193,7 +193,7 @@ class OneWorkerProtocol(AMP, object):
     @LogReceived.responder
     def oneLogMessage(self, message):
         """
-        
+
         """
         evt = eventFromJSON(message)
         text = formatEventAsClassicLogText(evt)
@@ -206,7 +206,7 @@ class OneWorkerProtocol(AMP, object):
 @attr.s
 class MPMManager(object):
     """
-    
+
     """
     reactor = attr.ib()
     openSubprocessConnections = attr.ib(default=attr.Factory(list))
@@ -219,13 +219,13 @@ class MPMManager(object):
 
     def newSubProcess(self):
         """
-        
+
         """
         here, there = socketpair(AF_UNIX, SOCK_STREAM)
         owp = OneWorkerProtocol()
         serverTransport = UNIXServer(here, owp, None, None, 4321, self.reactor)
         owp.makeConnection(serverTransport)
-        argv = [sys.executable, __main__.__file__, b'w']
+        argv = [sys.executable, __file__, b'w']
         self.reactor.spawnProcess(
             ProcessProtocol(), argv[0], args=argv, env=os.environ.copy(),
             childFDs={STDIN: 'w', STDOUT: 'r', STDERR: 'r',
@@ -239,9 +239,12 @@ class MPMManager(object):
 @react
 def main(reactor):
     """
-    
+
     """
     clo = CommandLineOptions()
     clo.parseOptions(sys.argv[1:])
     subCommandParser = clo.subOptions
     return subCommandParser.go(reactor)
+
+
+__all__ = ["__version__"]
