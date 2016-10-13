@@ -10,7 +10,6 @@ from socket import socketpair, AF_INET, AF_UNIX, SOCK_STREAM, fromfd
 import attr
 
 from twisted.python.usage import Options
-from twisted.internet.task import react
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.protocol import Protocol, Factory, ProcessProtocol
