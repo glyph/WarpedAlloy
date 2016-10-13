@@ -7,11 +7,9 @@ import os, sys
 from setuptools import setup, find_packages
 
 setup(
-    name='incremental',
-    use_incremental=True,
+    name='warpedalloy',
     maintainer='Glyph',
     maintainer_email='glyph@twistedmatrix.com',
-    url="https://github.com/hawkowl/incremental",
     classifiers = [
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
@@ -24,14 +22,15 @@ setup(
     packages=find_packages("src"),
     package_dir={"": "src"},
     setup_requires=[
-        "incremental"
+        "incremental>=16.10",
     ],
     install_requires=[
         "twisted>=16.4",
-        "incremental",
-        "attr",
+        "incremental>=16.10",
+        "attrs",
     ],
     license="MIT",
     zip_safe=False,
     long_description=open('README.rst').read(),
+    use_incremental=True,
 )
