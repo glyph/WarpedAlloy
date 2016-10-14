@@ -2,6 +2,8 @@
 
 from __future__ import absolute_import, print_function
 
+import __main__
+
 import sys
 import os
 
@@ -25,12 +27,12 @@ from twisted.web.static import Data
 
 from ._version import __version__
 
-import __main__
 
 STDIN = 0
 STDOUT = 1
 STDERR = 2
 MAGIC_FILE_DESCRIPTOR = 7
+
 
 
 @attr.s
