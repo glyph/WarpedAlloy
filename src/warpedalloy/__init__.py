@@ -33,14 +33,8 @@ MAGIC_FILE_DESCRIPTOR = 7
 
 @attr.s
 class SendToSubprocess(Protocol, object):
-    """
-
-    """
     mpm = attr.ib()
     def connectionMade(self):
-        """
-
-        """
         transport = self.transport
         transport.stopReading()
         transport.stopWriting()
@@ -56,15 +50,9 @@ class SendToSubprocess(Protocol, object):
 
 
 class ManagerOptions(Options, object):
-    """
-
-    """
 
     @inlineCallbacks
     def go(self, reactor):
-        """
-
-        """
         mgr = MPMManager(reactor)
         endpoint = TCP4ServerEndpoint(reactor, 8123)
         yield endpoint.listen(Factory.forProtocol(
@@ -74,33 +62,21 @@ class ManagerOptions(Options, object):
 
 
 class SendDescriptor(Command, object):
-    """
-
-    """
     arguments = [("descriptor", Descriptor())]
 
 
 
 class LogReceived(Command, object):
-    """
-
-    """
     arguments = [("message", Unicode())]
     requiresAnswer = False
 
 
 
 class ConnectionFromManager(AMP, object):
-    """
-
-    """
 
     _log = Logger()
 
     def __init__(self, reactor, factory):
-        """
-
-        """
         super(ConnectionFromManager, self).__init__()
         self.factory = factory
         self.reactor = reactor
@@ -108,9 +84,6 @@ class ConnectionFromManager(AMP, object):
 
     @SendDescriptor.responder
     def receiveDescriptor(self, descriptor):
-        """
-
-        """
         self._log.info(format="adopting new stream connection {descriptor}",
                        descriptor=descriptor)
         self.reactor.adoptStreamConnection(descriptor, AF_INET, self.factory)
@@ -118,30 +91,18 @@ class ConnectionFromManager(AMP, object):
 
 
     def sendLog(self, eventDictionary):
-        """
-
-        """
         eventText = eventAsJSON(eventDictionary)
         self.callRemote(LogReceived, message=eventText)
 
 
     def connectionLost(self, reason):
-        """
-
-        """
         self.reactor.stop()
 
 
 
 class WorkerOptions(Options, object):
-    """
-
-    """
 
     def go(self, reactor):
-        """
-
-        """
         data = Data("Hello world\n", "text/plain")
         data.putChild("", data)
         factory = Site(data)
@@ -162,9 +123,6 @@ class WorkerOptions(Options, object):
 
 
 class CommandLineOptions(Options, object):
-    """
-
-    """
     synopsis = "Usage: warped_alloy [options]"
 
     subCommands = [
@@ -178,22 +136,13 @@ class CommandLineOptions(Options, object):
 
 
 class OneWorkerProtocol(AMP, object):
-    """
-
-    """
 
     def sendFD(self, fileDescriptor):
-        """
-
-        """
         return self.callRemote(SendDescriptor, descriptor=fileDescriptor)
 
 
     @LogReceived.responder
     def oneLogMessage(self, message):
-        """
-
-        """
         evt = eventFromJSON(message)
         text = formatEventAsClassicLogText(evt)
         messageBytes = (text).encode("utf-8")
@@ -204,9 +153,6 @@ class OneWorkerProtocol(AMP, object):
 
 @attr.s
 class MPMManager(object):
-    """
-
-    """
     reactor = attr.ib()
     openSubprocessConnections = attr.ib(default=attr.Factory(list))
 
@@ -217,9 +163,6 @@ class MPMManager(object):
 
 
     def newSubProcess(self):
-        """
-
-        """
         here, there = socketpair(AF_UNIX, SOCK_STREAM)
         owp = OneWorkerProtocol()
         serverTransport = UNIXServer(here, owp, None, None, 4321, self.reactor)
@@ -235,14 +178,13 @@ class MPMManager(object):
         self.openSubprocessConnections.append(owp)
 
 
-def main(reactor):
-    """
 
-    """
+def main(reactor):
     clo = CommandLineOptions()
     clo.parseOptions(sys.argv[1:])
     subCommandParser = clo.subOptions
     return subCommandParser.go(reactor)
+
 
 
 __all__ = ["__version__"]
