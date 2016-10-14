@@ -25,6 +25,8 @@ from twisted.web.static import Data
 
 from ._version import __version__
 
+import __main__
+
 STDIN = 0
 STDOUT = 1
 STDERR = 2
@@ -167,7 +169,7 @@ class MPMManager(object):
         owp = OneWorkerProtocol()
         serverTransport = UNIXServer(here, owp, None, None, 4321, self.reactor)
         owp.makeConnection(serverTransport)
-        argv = [sys.executable, __file__, b'w']
+        argv = [sys.executable, __main__.__file__, b'w']
         self.reactor.spawnProcess(
             ProcessProtocol(), argv[0], args=argv, env=os.environ.copy(),
             childFDs={STDIN: 'w', STDOUT: 'r', STDERR: 'r',
