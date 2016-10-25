@@ -1,0 +1,17 @@
+*.egg-info/
+.eggs/
+*.o
+*.py[co]
+*.so
+*.DS_Store
+_trial_temp*/
+build/
+dropin.cache
+docs/_build/
+dist/
+htmlcov/
+.coverage*
+*~
+*.lock
+apidocs/
+.tox/
